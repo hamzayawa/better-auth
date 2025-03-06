@@ -13,6 +13,7 @@ export const authClient = createAuthClient({
       onTwoFactorRedirect() {
         window.location.href = "/auth/two-factor"
       },
+      methods: ["totp", "email"], // Explicitly enable both TOTP and email methods
     }),
     phoneNumberClient(),
     emailOTPClient(),
@@ -31,4 +32,5 @@ export type AuthSession = typeof auth.$Infer.Session
 
 // Export commonly used methods
 export const { signIn, signUp, signOut, useSession, getSession } = authClient
+
 

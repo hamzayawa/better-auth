@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2 } from "lucide-react"
 import QRCode from "react-qr-code"
+import { toast } from "sonner"
 
 const passwordSchema = z.object({
   password: z.string().min(1, "Password is required"),
@@ -60,19 +61,24 @@ export function Enable2FAForm() {
         {
           onError: (ctx) => {
             setError(ctx.error.message)
+            toast.error(ctx.error.message)
           },
         },
       )
 
       if (result.error) {
         setError(result.error.message)
+        toast.error(result.error.message)
       } else {
         setTotpUri(result.data.totpURI)
         setBackupCodes(result.data.backupCodes)
         setStep("qrcode")
+        toast.success("Two-factor authentication setup started")
       }
     } catch (err) {
-      setError("An unexpected error occurred. Please try again.")
+      const errorMessage = "An unexpected error occurred. Please try again."
+      setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -90,17 +96,47 @@ export function Enable2FAForm() {
         {
           onError: (ctx) => {
             setError(ctx.error.message)
+            toast.error(ctx.error.message)
           },
         },
       )
 
       if (result.error) {
         setError(result.error.message)
+        toast.error(result.error.message)
       } else {
         setStep("backupCodes")
+        toast.success("Two-factor authentication enabled successfully")
       }
     } catch (err) {
-      setError("An unexpected error occurred. Please try again.")
+      const errorMessage = "An unexpected error occurred. Please try again."
+      setError(errorMessage)
+      toast.error(errorMessage)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Send OTP if user prefers that method
+  const sendOtp = async () => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const result = await authClient.twoFactor.sendOtp({
+        method: "email", // Explicitly specify email as the method
+      })
+
+      if (result.error) {
+        setError(result.error.message)
+        toast.error(result.error.message)
+      } else {
+        toast.success("Verification code sent to your email")
+      }
+    } catch (err) {
+      const errorMessage = "An unexpected error occurred. Please try again."
+      setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -187,6 +223,23 @@ export function Enable2FAForm() {
                 Next
               </Button>
             </div>
+
+            <div className="mt-4">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">Or</span>
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-2">
+                <Button variant="outline" type="button" disabled={isLoading} onClick={sendOtp}>
+                  Send code via email
+                </Button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -259,4 +312,5 @@ export function Enable2FAForm() {
     </Card>
   )
 }
+
 

@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2 } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
+import { toast } from "sonner"
 
 const twoFactorSchema = z.object({
   code: z.string().min(6, "Code must be at least 6 characters").max(6, "Code must be at most 6 characters"),
@@ -27,6 +28,7 @@ export function TwoFactorForm() {
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard"
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isSendingOtp, setIsSendingOtp] = useState(false)
 
   const form = useForm<TwoFactorFormValues>({
     resolver: zodResolver(twoFactorSchema),
@@ -41,6 +43,7 @@ export function TwoFactorForm() {
     setError(null)
 
     try {
+      // First try to verify with TOTP
       const result = await authClient.twoFactor.verifyTotp(
         {
           code: data.code,
@@ -49,19 +52,49 @@ export function TwoFactorForm() {
         },
         {
           onError: (ctx) => {
-            setError(ctx.error.message)
+            console.log("TOTP verification error:", ctx.error.message)
+            // Don't set error here, we'll try email verification next
           },
           onSuccess: () => {
+            toast.success("Two-factor authentication successful")
             router.push(callbackUrl)
+            return
           },
         },
       )
 
       if (result.error) {
-        setError(result.error.message)
+        // If TOTP verification fails, try email verification
+        console.log("Trying email verification instead")
+        const emailResult = await authClient.twoFactor.verifyOtp(
+          {
+            code: data.code,
+            trustDevice: data.trustDevice,
+            callbackURL: callbackUrl,
+          },
+          {
+            onError: (ctx) => {
+              console.log("Email OTP verification error:", ctx.error.message)
+              setError(ctx.error.message)
+              toast.error(ctx.error.message)
+            },
+            onSuccess: () => {
+              toast.success("Two-factor authentication successful")
+              router.push(callbackUrl)
+            },
+          },
+        )
+
+        if (emailResult.error) {
+          setError(emailResult.error.message)
+          toast.error(emailResult.error.message)
+        }
       }
     } catch (err) {
-      setError("An unexpected error occurred. Please try again.")
+      console.error("2FA verification error:", err)
+      const errorMessage = "An unexpected error occurred. Please try again."
+      setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -69,21 +102,30 @@ export function TwoFactorForm() {
 
   // Send OTP if user prefers that method
   const sendOtp = async () => {
-    setIsLoading(true)
+    setIsSendingOtp(true)
     setError(null)
 
     try {
-      const result = await authClient.twoFactor.sendOtp()
+      console.log("Sending email OTP")
+      const result = await authClient.twoFactor.sendOtp({
+        method: "email", // Explicitly specify email as the method
+      })
+
+      console.log("Send OTP result:", result)
 
       if (result.error) {
         setError(result.error.message)
+        toast.error(result.error.message)
       } else {
-        setError(null)
+        toast.success("Verification code sent to your email")
       }
     } catch (err) {
-      setError("An unexpected error occurred. Please try again.")
+      console.error("Send OTP error:", err)
+      const errorMessage = "An unexpected error occurred. Please try again."
+      setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
-      setIsLoading(false)
+      setIsSendingOtp(false)
     }
   }
 
@@ -143,8 +185,15 @@ export function TwoFactorForm() {
           </div>
 
           <div className="mt-4 grid grid-cols-1 gap-2">
-            <Button variant="outline" type="button" disabled={isLoading} onClick={sendOtp}>
-              Send code via email
+            <Button variant="outline" type="button" disabled={isLoading || isSendingOtp} onClick={sendOtp}>
+              {isSendingOtp ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending code...
+                </>
+              ) : (
+                "Send code via email"
+              )}
             </Button>
             <Button
               variant="outline"
@@ -167,4 +216,5 @@ export function TwoFactorForm() {
     </Card>
   )
 }
+
 

@@ -12,6 +12,12 @@ export async function GET() {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
   }
 
-  return NextResponse.json({ userId: session.user.id, email: session.user.email })
+  return NextResponse.json({
+    userId: session.user.id,
+    email: session.user.email,
+    role: session.user.role,
+    message: "Copy this userId and set it as ADMIN_USER_ID in your .env file",
+  })
 }
+
 

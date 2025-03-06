@@ -101,8 +101,10 @@ export const auth = betterAuth({
   plugins: [
     // Two-factor authentication
     twoFactor({
+      methods: ["totp", "email"], // Explicitly enable both TOTP and email methods
       otpOptions: {
         async sendOTP({ user, otp }, request) {
+          console.log(`Sending 2FA OTP code ${otp} to ${user.email}`)
           await sendEmail({
             to: user.email,
             subject: "Your verification code",
@@ -116,6 +118,15 @@ export const auth = betterAuth({
             `,
           })
         },
+        otpLength: 6,
+        otpExpiresIn: 5 * 60, // 5 minutes in seconds
+      },
+      totpOptions: {
+        issuer: "NextAuth App", // The name of your app that appears in authenticator apps
+      },
+      backupCodes: {
+        count: 10, // Number of backup codes to generate
+        length: 8, // Length of each backup code
       },
     }),
 
@@ -147,6 +158,7 @@ export const auth = betterAuth({
           "forget-password": "Reset your password",
         }
 
+        console.log(`Sending email OTP code ${otp} to ${email} for ${type}`)
         await sendEmail({
           to: email,
           subject: subjects[type] || "Your verification code",

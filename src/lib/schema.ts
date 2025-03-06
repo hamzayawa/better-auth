@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean } from "drizzle-orm/pg-core"
+import { pgTable, text, timestamp, boolean, jsonb } from "drizzle-orm/pg-core"
 
 // Rename the export to match what Better Auth is looking for
 export const user = pgTable("user", {
@@ -57,11 +57,43 @@ export const verifications = pgTable("verification", {
   updatedAt: timestamp("updatedAt").defaultNow(),
 })
 
+// Update the twoFactorTable schema to match Better Auth's expectations
 export const twoFactorTable = pgTable("twoFactor", {
   id: text("id").primaryKey(),
   userId: text("userId").notNull(),
   secret: text("secret"),
   backupCodes: text("backupCodes"),
+  method: text("method"), // Add method field to specify the 2FA method (totp, email, etc.)
+  verified: boolean("verified").default(false), // Add verified field to track if 2FA is verified
+  createdAt: timestamp("createdAt").defaultNow(),
+  updatedAt: timestamp("updatedAt").defaultNow(),
 })
+
+// New tables for roles and permissions
+export const roles = pgTable("roles", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  description: text("description"),
+  isSystem: boolean("isSystem").default(false), // To mark system roles that shouldn't be deleted
+  permissions: jsonb("permissions").notNull(), // Store permissions as JSON
+  createdAt: timestamp("createdAt").defaultNow(),
+  updatedAt: timestamp("updatedAt").defaultNow(),
+})
+
+// Define the types for permissions
+export type Permission = {
+  resource: string
+  actions: string[]
+}
+
+export type RoleWithPermissions = {
+  id: string
+  name: string
+  description: string | null
+  isSystem: boolean
+  permissions: Permission[]
+  createdAt: Date
+  updatedAt: Date
+}
 
 

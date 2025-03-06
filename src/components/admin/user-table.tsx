@@ -36,8 +36,13 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
+import type { RoleWithPermissions } from "@/lib/schema"
 
-export function UserTable() {
+interface UserTableProps {
+  availableRoles: RoleWithPermissions[]
+}
+
+export function UserTable({ availableRoles }: UserTableProps) {
   const router = useRouter()
   const [users, setUsers] = useState<any[]>([])
   const [totalUsers, setTotalUsers] = useState(0)
@@ -225,6 +230,15 @@ export function UserTable() {
     }
   }
 
+  // Get available role options for filter and role change
+  const roleOptions = [
+    { value: "all", label: "All Roles" },
+    ...availableRoles.map((role) => ({
+      value: role.name,
+      label: role.name.charAt(0).toUpperCase() + role.name.slice(1),
+    })),
+  ]
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-4 justify-between">
@@ -267,11 +281,11 @@ export function UserTable() {
               <SelectValue placeholder="Role" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Roles</SelectItem>
-              <SelectItem value="admin">Admin</SelectItem>
-              <SelectItem value="user">User</SelectItem>
-              <SelectItem value="editor">Editor</SelectItem>
-              <SelectItem value="moderator">Moderator</SelectItem>
+              {roleOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -550,10 +564,11 @@ export function UserTable() {
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="user">User</SelectItem>
-                  <SelectItem value="editor">Editor</SelectItem>
-                  <SelectItem value="moderator">Moderator</SelectItem>
+                  {availableRoles.map((role) => (
+                    <SelectItem key={role.id} value={role.name}>
+                      {role.name.charAt(0).toUpperCase() + role.name.slice(1)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -569,4 +584,5 @@ export function UserTable() {
     </div>
   )
 }
+
 
